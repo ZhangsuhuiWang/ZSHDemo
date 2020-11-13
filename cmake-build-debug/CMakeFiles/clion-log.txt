@@ -1,0 +1,6 @@
+"/Users/wangzhangsuhui/Library/Application Support/JetBrains/Toolbox/apps/CLion/ch-0/201.6668.126/CLion.app/Contents/bin/cmake/mac/bin/cmake" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/bin/gcc -DCMAKE_CXX_COMPILER=/usr/bin/g++ -G "CodeBlocks - Unix Makefiles" /Users/wangzhangsuhui/Documents/GithubRepo/ZSHDemo
+-- Configuring done
+CMake Error: Cannot determine link language for target "ZSHDemo".
+CMake Error: CMake can not determine linker language for target: ZSHDemo
+-- Generating done
+CMake Generate step failed.  Build files cannot be regenerated correctly.

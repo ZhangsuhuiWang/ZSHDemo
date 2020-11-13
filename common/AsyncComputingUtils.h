@@ -412,7 +412,58 @@ public:
     }
 
     ~OverlappedDtoHCopyCoordinator() {
-        
+        this->finishWork();
+        delete this->wavefield_copy_coordinator;
+        cudaStreamDestroy(this->copy_stream);
+    }
+
+    void startNewRound(int it, float *next_dst) {
+        this->wavefield_copy_coordinator->waitForComplete();
+        flushBatchTransmission();
+        char *tmp = this->twf2;
+        char->twf2 = this->twf1;
+        this->twf1 = tmp;
+        if(this->current_dst != NULL) {
+            wavefield_copy_coordinator->startCopy(this->twf2, this->current_dst, this->bytes_to_copy);
+        }
+        this->current_dst = (char*)next_dst;
+    }
+
+    void initBatchTransmission(float *cu2) {
+        gpu_pack(this->wf_size, cu2, this->cu_twf);
+        this->copied_bytes = 0;
+    }
+
+    void transmitBatch() {
+        if(this->copied_bytes < 0) {
+            return;
+        }
+        if(this->copied_bytes >= this->bytes_to_copy) {
+            return;
+        }
+        long remained_bytes = this->bytes_to_copy - this->copied_bytes;
+        long trans_bytes = (remained_bytes > this->batch_bytes) ? this->batch_bytes : remained_bytes;
+        checkCudaErrors(cudaMemcpyAsync((char*)this->twf1 + this->copied_bytes, (char*)this->cu_twf + this->copied_bytes,
+                trans_bytes, cudaMemcpyDeviceToHost, this->copy_stream));
+        this->copied_bytes += trans_bytes;
+    }
+
+    void flushBatchTransmission() {
+        if(this->copied_bytes < 0) {
+            return;
+        }
+        cudaStreamSynchronize(this->copy_stream);
+        if(this->copied_bytes < this->bytes_to_copy) {
+            checkCudaErrors(cudaMemcpyAsync(this->twf1 + this->copied_bytes, this->cu_twf + this->copied_bytes,
+                    this->bytes_to_copy - this->copied_bytes, cudaMemcpyDeviceToHost, this->copy_stream));
+            cudaStreamSynchronize(this->copy_stream);
+        }
+        this->copied_bytes = -1;
+    }
+
+    void finishWork() {
+        this->startNewRound(-1, NULL);
+        this->startNewRound(-1, NUL)
     }
 };
 

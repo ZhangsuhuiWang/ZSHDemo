@@ -467,7 +467,66 @@ public:
     }
 };
 
+extern OverlappedDtoHCopyCoordinator *global_dtoh_coordinator;
 
+class OverlappedImagingCoordinator {
+private:
+    long copied_size;
+    GradientPolicy3* gpolicy;
+    AsyncImagingCoordinator *async_imaging_coordinator;
+public:
+    cudaStream_t copy_stream;
+    float *current_tu;
+    float *current_v;
+    float *twf1, *twf2;
+    float *cu_twf;
+    long wf_size;
+    long batch_size;
+
+    OverlappedImagingCoordinator(long wf_size, int numBatch, float *twf1, float *twf2,
+            float *cu_twf, GradinetPolicy3* gpolicy)  {
+        cudaStreamCreate(&(this->copy_stream));
+        this->twf1 = twf1;
+        this->twf2 = twf2;
+        this->cu_twf = cu_twf;
+        if(twf1 == NULL || twf2 == NULL || cu_twf == NULL) {
+            print("Passing NULL wavefield buffer pointer");
+        }
+        this->wf_size = wf_size;
+        this->current_v = NULL;
+        this->current_tu = NULL;
+        this->copied_size = -1;
+        this->batch_size = (int)(wf_size / numBatch) + 1;
+        this->gpolicy = gpolicy;
+        this->async_imaging_coordinator = new AsyncImagingCoordinator();
+    }
+
+    ~OverlappedImagingCoordinator() {
+        this->finishWork();
+        delete this->async_imaging_coordinator;
+        cudaStreamDestroy(this->copy_stream);
+    }
+
+    void startNewRount(int it, float *next_tu, float *next_v) {
+
+    }
+
+    void initBatchTransmission(float *cu2) {
+
+    }
+
+    void transmitBatch() {
+
+    }
+
+    void flushBatchTransmission() {
+
+    }
+
+    void finishWork() {
+
+    }
+};
 
 
 #endif //ZSHDEMO_ASYNCCOMPUTINGUTILS_H

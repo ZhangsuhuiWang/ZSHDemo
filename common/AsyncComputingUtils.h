@@ -290,7 +290,7 @@ public:
         pthread_mutex_unlock(&mutex);
     }
 
-    void finishWork() {
+    void finishTask() {
         pthread_mutex_lock(&mutex);
         this->hasWork = false;
         pthread_cond_broadcast(&idle);
@@ -507,26 +507,63 @@ public:
         cudaStreamDestroy(this->copy_stream);
     }
 
-    void startNewRount(int it, float *next_tu, float *next_v) {
-
+    void startNewRound(int it, float *next_tu, float *next_v) {
+        this->async_imaging_coordinator->waitForComplete();
+        flushBatchTransmission();
+        float *tmp = this->twf2;
+        this->twf2 = this->twf1;
+        this->twf1 = tmp;
+        if(this->current_tu != NULL) {
+            this->async_imaging_coordinator->startImaging(this->gpolicy, this->current_v, this->twf2, this->current_tu);
+        }
+        this->current_v = next_v;
+        this->current_tu = current_tu;
     }
 
     void initBatchTransmission(float *cu2) {
-
+        checkCudaErrors(cudaMemcpy(this->cu_twf, cu2, this->wf_size * sizeof(float), cudaMemcpyDeviceToDevice));
+        this->copied_size = 0;
     }
 
     void transmitBatch() {
-
+        if(this->copied_size < 0) {
+            return;
+        }
+        if(this->copied_size >= this->wf_size) {
+            return;
+        }
+        long remained_size = this->wf_size - this->copied_size;
+        long trans_size = (remained_size > this->batch_size) ? this->batch_size : remained_size;
+        checkCudaErrors(cudaMemcpyAsync(this->twf1 + this->copied_size, this->cu_twf + this->copied_size,
+                (trans_size) * sizeof(float), cudaMemcpyDeviceToHost, this->copy_stream));
+        this->copied_size += trans_size;
     }
 
     void flushBatchTransmission() {
-
+        if(this->copied_size < 0) {
+            return;
+        }
+        cudaStreamSynchronize(this->copy_stream);
+        if(this->copied_size < this->wf_size) {
+            checkCudaErrors(cudaMemcpyAsync(this->twf1 + this->copied_size, this->cu_twf + this->copied_size,
+                    (this->wf_size - this->copied_size) * sizeof(float), cudaMemcpyDeviceToHost, this->copy_stream));
+        }
+        this->copied_size = -1;
     }
 
     void finishWork() {
-
+        startNewRound(-1, NULL, NULL);
+        startNewRound(-1, NULL, NULL);
     }
 };
 
+extern OverlappedImagingCoordinator *global_overlapped_imaging_coordinator;
+
+struct MemsetTask {
+    void *p;
+    long len;
+};
+
+extern void *start_async_memset(void* arg);
 
 #endif //ZSHDEMO_ASYNCCOMPUTINGUTILS_H
